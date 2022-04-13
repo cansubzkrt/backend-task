@@ -9,6 +9,14 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(@InjectModel('User') private userModel: Model<User>) {}
 
+  /**
+   * user is registering
+   *
+   * Not: checking user information
+   * Not:Security is ensured by hashing the password
+   *
+   * @param createUserDto
+   */
   async create(createUserDto: CreateUserDto): Promise<UserDoc> {
     const { username, email, password } = createUserDto;
     const salt = await bcrypt.genSalt();

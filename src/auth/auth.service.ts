@@ -4,8 +4,6 @@ import { Model } from 'mongoose';
 import { User } from '../users/schema/user.schema';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { IJwtPayload } from "./interface/jwt-payload.interface";
-import { IUser } from "../users/interface/user.interface";
 
 @Injectable()
 export class AuthService {
@@ -14,21 +12,37 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async validateUser(username: string, password: string): Promise<any> {
-    const user = await this.userModel.findOne({ username });
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      throw new BadRequestException('User not found');
-    }
-    return user;
+  /**
+   * We get access token while the user is logging in
+   *
+   * @param username
+   * @param password
+   */
+  async login(username: string, password: string): Promise<any> {
+    const payload = { username: username, password: password };
+    return {
+      accessToken: this.jwtService.sign(payload, {
+        secret: process.env.JWT_SECRET,
+        expiresIn: '1day',
+      }),
+    };
   }
 
-  async login(username: string, password: string, user: IUser): Promise<any> {
-    const checkUser = await this.validateUser(username, password);
-    if (!checkUser) {
-      throw new BadRequestException('User information is wrong');
+  /**
+   * We check the password we have had by comparing
+   *
+   * @param username
+   * @param password
+   */
+  async validateUser(username: string, password: string): Promise<any> {
+    const user = await this.userModel.findOne({ username });
+    if (!user) {
+      return null;
     }
-    const payload: IJwtPayload = { username: user.username, userId: user._id };
-    return this.jwtService.sign(payload);
+    const valid = await bcrypt.compare(password, user.password);
+    if (valid) {
+      return user;
+    }
+    throw new BadRequestException('User not found');
   }
 }
